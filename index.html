@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daylog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#ffffff;
+    --ink:#111111;
+    --muted:#8c8c8c;
+    --line:#e7e7e7;
+    --line-soft:#f2f2f2;
+    --accent:#e0322c;
+    --accent-soft:#fdeceb;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--white);
+    color:var(--ink);
+    font-family:'Poppins', sans-serif;
+    font-weight:400;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{ font-variant-numeric: tabular-nums; }
+
+  .app{
+    max-width:1200px;
+    margin:0 auto;
+    padding:32px 24px 80px;
+  }
+
+  header.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    flex-wrap:wrap;
+    gap:16px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:20px;
+    margin-bottom:28px;
+  }
+  header.top .brand-eyebrow{
+    font-size:11px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 6px;
+    font-weight:600;
+  }
+  header.top h1{
+    font-size:32px;
+    font-weight:700;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  header.top .top-right{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .today-stamp{
+    font-size:13px;
+    color:var(--muted);
+    text-align:right;
+    line-height:1.5;
+  }
+  .today-stamp .big{
+    font-size:18px;
+    color:var(--ink);
+    font-weight:600;
+    display:block;
+  }
+  .icon-btn{
+    width:36px;height:36px;
+    border-radius:var(--radius);
+    border:1px solid var(--line);
+    background:var(--white);
+    color:var(--ink);
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;
+    transition:border-color 0.15s ease, color 0.15s ease;
+    position:relative;
+  }
+  .icon-btn:hover{ border-color:var(--accent); color:var(--accent); }
+  input[type="color"].accent-swatch{
+    width:36px;height:36px;
+    border-radius:var(--radius);
+    border:1px solid var(--line);
+    padding:2px;
+    cursor:pointer;
+    background:var(--white);
+  }
+
+  .layout{
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    gap:24px;
+    align-items:start;
+  }
+  @media (max-width: 840px){
+    .layout{ grid-template-columns: 1fr; }
+  }
+
+  .card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+  }
+  .card + .card{ margin-top:20px; }
+
+  /* Calendar */
+  .cal-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:16px;
+  }
+  .cal-head .month-label{
+    font-size:16px;
+    font-weight:600;
+    letter-spacing:0.01em;
+  }
+  .cal-nav{ display:flex; gap:6px; }
+  .cal-nav button{
+    width:30px;height:30px;
+    border-radius:var(--radius);
+    border:1px solid var(--line);
+    background:var(--white);
+    color:var(--ink);
+    cursor:pointer;
+    font-size:14px;
+    display:flex;align-items:center;justify-content:center;
+    transition:border-color 0.15s ease, color 0.15s ease;
+  }
+  .cal-nav button:hover{ border-color:var(--accent); color:var(--accent); }
+
+  .weekday-row{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    margin-bottom:6px;
+  }
+  .weekday-row span{
+    font-size:10px;
+    color:var(--muted);
+    text-align:center;
+    letter-spacing:0.06em;
+    font-weight:600;
+  }
+  .day-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:4px;
+  }
+  .day-cell{
+    aspect-ratio:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    border-radius:var(--radius);
+    cursor:pointer;
+    position:relative;
+    font-size:13px;
+    color:var(--ink);
+    background:transparent;
+    border:1px solid transparent;
+    transition:background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .day-cell.empty{ cursor:default; }
+  .day-cell:not(.empty):hover{ background:var(--line-soft); }
+  .day-cell.today{ border-color:var(--accent); font-weight:600; }
+  .day-cell.selected{ background:var(--accent); color:var(--white); font-weight:700; border-color:var(--accent); }
+  .day-cell.selected .dot{ background:var(--white); }
+  .day-cell .dot{
+    width:4px;height:4px;border-radius:50%;
+    background:var(--accent);
+    position:absolute;
+    bottom:6px;
+  }
+
+  /* Categories manager */
+  .cat-manager{ margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
+  .cat-manager .sec-title{
+    font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;
+    font-weight:600; margin-bottom:10px;
+  }
+  .cat-list{ display:flex; flex-direction:column; gap:6px; }
+  .cat-row{
+    display:flex; align-items:center; gap:8px;
+    font-size:13px;
+  }
+  .cat-row .swatch{
+    width:12px;height:12px;border-radius:3px;flex-shrink:0;
+    border:1px solid var(--line);
+  }
+  .cat-row .name{ flex:1; }
+  .cat-row .cat-del{
+    background:none;border:none;color:var(--muted);cursor:pointer;
+    font-size:12px;padding:2px 5px;border-radius:2px;
+  }
+  .cat-row .cat-del:hover{ color:var(--accent); background:var(--accent-soft); }
+  .add-cat-row{
+    display:flex; gap:8px; margin-top:10px; align-items:center;
+  }
+  .add-cat-row input[type="text"]{
+    flex:1;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:7px 9px;
+    font-family:'Poppins', sans-serif;
+    font-size:12.5px;
+    outline:none;
+    background:#fafafa;
+  }
+  .add-cat-row input[type="text"]:focus{ border-color:var(--accent); background:var(--white); }
+  .add-cat-row input[type="color"]{
+    width:32px;height:32px;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:2px;
+    cursor:pointer;
+    background:var(--white);
+  }
+  .add-cat-row button{
+    border:1px solid var(--accent);
+    background:var(--white);
+    color:var(--accent);
+    border-radius:var(--radius);
+    padding:7px 12px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .add-cat-row button:hover{ background:var(--accent); color:var(--white); }
+
+  /* Day panel */
+  .day-panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:16px;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .day-panel-head .date-title{
+    font-size:21px;
+    font-weight:700;
+  }
+  .day-panel-head .date-sub{
+    color:var(--muted);
+    font-size:13px;
+    margin-top:2px;
+  }
+  .tracked-total{ text-align:right; }
+  .tracked-total .num{ font-size:20px; color:var(--accent); font-weight:700; display:block; }
+  .tracked-total .lbl{ font-size:10px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; }
+
+  /* category breakdown bar */
+  .breakdown{ margin-bottom:18px; }
+  .breakdown-bar{
+    display:flex;
+    height:10px;
+    border-radius:5px;
+    overflow:hidden;
+    background:var(--line-soft);
+    margin-bottom:10px;
+  }
+  .breakdown-bar .seg{ height:100%; }
+  .breakdown-legend{
+    display:flex; flex-wrap:wrap; gap:12px;
+  }
+  .breakdown-legend .bl-item{
+    display:flex; align-items:center; gap:5px;
+    font-size:11.5px; color:var(--muted);
+  }
+  .breakdown-legend .bl-dot{ width:8px;height:8px;border-radius:2px; }
+
+  .view-toggle{
+    display:flex; align-items:center; gap:8px;
+    font-size:12px; color:var(--muted);
+    margin-bottom:14px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .view-toggle input{ accent-color:var(--accent); cursor:pointer; }
+
+  .day-body{
+    display:grid;
+    grid-template-columns: 50px 1fr;
+    gap:18px;
+  }
+  .day-body.no-rail{ grid-template-columns: 1fr; }
+  @media (max-width:560px){
+    .day-body{ grid-template-columns: 34px 1fr; }
+  }
+
+  .rail-wrap{ position:relative; }
+  .rail-track{
+    position:relative;
+    height:576px;
+    border-left:1px dashed var(--line);
+    margin-left:8px;
+  }
+  .rail-hour{
+    position:absolute;
+    left:-8px;
+    transform:translateY(-50%);
+    font-size:9px;
+    color:var(--muted);
+    width:34px;
+    text-align:right;
+    padding-right:6px;
+  }
+  .rail-block{
+    position:absolute;
+    left:6px;
+    right:0;
+    border-radius:2px;
+    min-height:6px;
+    opacity:0.9;
+    cursor:pointer;
+  }
+
+  .entries-col{ min-height:180px; }
+  .empty-state{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
+    padding:36px 8px;
+    color:var(--muted);
+  }
+  .empty-state .glyph{ font-size:24px; color:var(--accent); font-weight:700; }
+  .empty-state p{ margin:0; font-size:14px; max-width:340px; line-height:1.5; }
+
+  .entry{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    padding:12px 8px;
+    border-bottom:1px solid var(--line-soft);
+    border-radius:var(--radius);
+    cursor:pointer;
+    transition:background 0.15s ease;
+  }
+  .entry:hover{ background:#fafafa; }
+  .entry:last-child{ border-bottom:none; }
+  .entry.editing{ background:var(--accent-soft); }
+  .entry .cat-chip{ width:9px; height:9px; border-radius:2px; margin-top:5px; flex-shrink:0; }
+  .entry .body{ flex:1; min-width:0; }
+  .entry .title{ font-size:14.5px; font-weight:600; color:var(--ink); word-break:break-word; }
+  .entry .notes{ font-size:12.5px; color:var(--muted); margin-top:3px; line-height:1.4; }
+  .entry .meta{
+    font-size:11.5px;
+    color:var(--muted);
+    margin-top:4px;
+    display:flex; gap:10px; flex-wrap:wrap;
+  }
+  .entry .meta .dur{ color:var(--accent); font-weight:600; }
+  .entry .del{
+    background:none; border:none; color:var(--muted); cursor:pointer;
+    font-size:14px; padding:4px 6px; border-radius:2px;
+    transition:color 0.15s ease, background 0.15s ease;
+  }
+  .entry .del:hover{ color:var(--accent); background:var(--accent-soft); }
+
+  /* Add / edit form */
+  .add-form{
+    margin-top:20px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+  }
+  .add-form .form-title{
+    font-size:12px; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:0.06em;
+    margin-bottom:12px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .add-form .form-title .cancel-edit{
+    color:var(--accent); cursor:pointer; text-transform:none; font-weight:500; font-size:12px;
+  }
+  .add-form .row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+  .field{ display:flex; flex-direction:column; gap:6px; flex:1; min-width:120px; }
+  .field label{
+    font-size:10px;
+    color:var(--muted);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    font-weight:600;
+  }
+  .field input, .field select, .field textarea{
+    background:#fafafa;
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:var(--radius);
+    padding:9px 10px;
+    font-family:'Poppins', sans-serif;
+    font-size:13.5px;
+    outline:none;
+    resize:vertical;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--accent); background:var(--white); }
+  .field.grow{ flex:2.2; min-width:180px; }
+  .add-form button.submit{
+    width:100%;
+    background:var(--accent);
+    color:var(--white);
+    border:1px solid var(--accent);
+    border-radius:var(--radius);
+    padding:11px;
+    font-family:'Poppins', sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    cursor:pointer;
+    transition:opacity 0.15s ease;
+  }
+  .add-form button.submit:hover{ opacity:0.85; }
+  .add-form button.submit:active{ opacity:0.7; }
+  .form-error{ color:var(--accent); font-size:12px; margin-top:8px; }
+
+  .status-msg{
+    font-size:11px;
+    color:var(--muted);
+    text-align:center;
+    margin-top:24px;
+  }
+  .status-msg button.link{
+    background:none;border:none;color:var(--accent);cursor:pointer;
+    font-size:11px; text-decoration:underline; padding:0; font-family:'Poppins', sans-serif;
+  }
+
+  ::selection{ background:var(--accent); color:var(--white); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <p class="brand-eyebrow">— time, kept honestly —</p>
+      <h1>Daylog</h1>
+    </div>
+    <div class="top-right">
+      <div class="today-stamp"><span class="big" id="todayBig"></span><span id="todaySmall"></span></div>
+      <input type="color" class="accent-swatch" id="accentPicker" title="Choose accent color" value="#e0322c">
+      <button class="icon-btn" id="exportBtn" title="Export your log as JSON">⭳</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Left column: calendar + categories -->
+    <div>
+      <div class="card">
+        <div class="cal-head">
+          <span class="month-label" id="monthLabel"></span>
+          <div class="cal-nav">
+            <button id="prevMonth" aria-label="Previous month">‹</button>
+            <button id="nextMonth" aria-label="Next month">›</button>
+          </div>
+        </div>
+        <div class="weekday-row">
+          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+        </div>
+        <div class="day-grid" id="dayGrid"></div>
+
+        <div class="cat-manager">
+          <div class="sec-title">Categories</div>
+          <div class="cat-list" id="catList"></div>
+          <div class="add-cat-row">
+            <input type="color" id="newCatColor" value="#e0322c">
+            <input type="text" id="newCatName" placeholder="New category name" maxlength="24">
+            <button id="addCatBtn" type="button">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day panel -->
+    <div class="card">
+      <div class="day-panel-head">
+        <div>
+          <div class="date-title" id="dateTitle">—</div>
+          <div class="date-sub" id="dateSub"></div>
+        </div>
+        <div class="tracked-total">
+          <span class="num" id="totalTracked">0h 0m</span>
+          <span class="lbl">tracked</span>
+        </div>
+      </div>
+
+      <div class="breakdown" id="breakdown" style="display:none;">
+        <div class="breakdown-bar" id="breakdownBar"></div>
+        <div class="breakdown-legend" id="breakdownLegend"></div>
+      </div>
+
+      <label class="view-toggle">
+        <input type="checkbox" id="timelineToggle" checked>
+        Show hour-by-hour timeline
+      </label>
+
+      <div class="day-body" id="dayBody">
+        <div class="rail-wrap" id="railWrap">
+          <div class="rail-track" id="railTrack"></div>
+        </div>
+        <div class="entries-col" id="entriesCol">
+          <div class="empty-state">
+            <span class="glyph">···</span>
+            <p>Loading your log…</p>
+          </div>
+        </div>
+      </div>
+
+      <form class="add-form" id="addForm">
+        <div class="form-title">
+          <span id="formTitleText">Add an activity</span>
+          <span class="cancel-edit" id="cancelEdit" style="display:none;">Cancel edit</span>
+        </div>
+        <div class="row">
+          <div class="field grow">
+            <label for="fTitle">What did you do</label>
+            <input type="text" id="fTitle" placeholder="e.g. Deep work on report" maxlength="120" required>
+          </div>
+          <div class="field">
+            <label for="fCat">Category</label>
+            <select id="fCat"></select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="fStart">Start</label>
+            <input type="time" id="fStart" required>
+          </div>
+          <div class="field">
+            <label for="fEnd">End</label>
+            <input type="time" id="fEnd" required>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field grow">
+            <label for="fNotes">Notes (optional)</label>
+            <textarea id="fNotes" rows="2" placeholder="Any detail worth remembering" maxlength="300"></textarea>
+          </div>
+        </div>
+        <button type="submit" class="submit" id="submitBtn">Add to log</button>
+        <div class="form-error" id="formError"></div>
+      </form>
+    </div>
+  </div>
+
+  <p class="status-msg" id="statusMsg">Your log saves automatically and is private to you.</p>
+</div>
+
+<script>
+(function(){
+  const pad = n => String(n).padStart(2,'0');
+  const fmtKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const DEFAULT_ACCENT = '#e0322c';
+  const DEFAULT_CATEGORIES = [
+    {id:'work', label:'Work', color:'#111111'},
+    {id:'study', label:'Study', color:'#3a6ea5'},
+    {id:'health', label:'Health', color:'#3a9e6a'},
+    {id:'personal', label:'Personal', color:'#c9622e'},
+    {id:'other', label:'Other', color:'#8c8c8c'}
+  ];
+
+  let categories = [];
+  let settings = { accent: DEFAULT_ACCENT, showTimeline: true };
+
+  function timeToMin(t){ const [h,m] = t.split(':').map(Number); return h*60+m; }
+  function minToLabel(mins){
+    let h = Math.floor(mins/60), m = mins%60;
+    const ap = h>=12 ? 'PM':'AM';
+    let h12 = h%12; if(h12===0) h12=12;
+    return `${h12}:${pad(m)} ${ap}`;
+  }
+  function durLabel(startMin,endMin){
+    let d = endMin-startMin;
+    if(d<0) d += 1440;
+    const h = Math.floor(d/60), m = d%60;
+    if(h && m) return `${h}h ${m}m`;
+    if(h) return `${h}h`;
+    return `${m}m`;
+  }
+
+  let today = new Date();
+  let viewYear = today.getFullYear();
+  let viewMonth = today.getMonth();
+  let selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  let monthHasEntries = new Set();
+  let editingId = null;
+
+  const monthLabel = document.getElementById('monthLabel');
+  const dayGrid = document.getElementById('dayGrid');
+  const dateTitle = document.getElementById('dateTitle');
+  const dateSub = document.getElementById('dateSub');
+  const entriesCol = document.getElementById('entriesCol');
+  const railTrack = document.getElementById('railTrack');
+  const railWrap = document.getElementById('railWrap');
+  const dayBody = document.getElementById('dayBody');
+  const totalTracked = document.getElementById('totalTracked');
+  const statusMsg = document.getElementById('statusMsg');
+  const catList = document.getElementById('catList');
+  const fCat = document.getElementById('fCat');
+  const breakdownEl = document.getElementById('breakdown');
+  const breakdownBar = document.getElementById('breakdownBar');
+  const breakdownLegend = document.getElementById('breakdownLegend');
+  const timelineToggle = document.getElementById('timelineToggle');
+  const accentPicker = document.getElementById('accentPicker');
+  const formTitleText = document.getElementById('formTitleText');
+  const cancelEditBtn = document.getElementById('cancelEdit');
+  const submitBtn = document.getElementById('submitBtn');
+
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  function renderTodayStamp(){
+    document.getElementById('todayBig').textContent = `${DAY_NAMES[today.getDay()]}`;
+    document.getElementById('todaySmall').innerHTML = `<br>${MONTH_NAMES[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
+  }
+
+  // ---------- settings ----------
+  async function loadSettings(){
+    try{
+      const res = await window.storage.get('settings', false);
+      if(res && res.value){ settings = Object.assign(settings, JSON.parse(res.value)); }
+    }catch(e){ /* first run */ }
+    document.documentElement.style.setProperty('--accent', settings.accent || DEFAULT_ACCENT);
+    accentPicker.value = settings.accent || DEFAULT_ACCENT;
+    timelineToggle.checked = settings.showTimeline !== false;
+    applyTimelineVisibility();
+  }
+  async function saveSettings(){
+    try{ await window.storage.set('settings', JSON.stringify(settings), false); }catch(e){}
+  }
+  function applyTimelineVisibility(){
+    if(settings.showTimeline === false){
+      railWrap.style.display = 'none';
+      dayBody.classList.add('no-rail');
+    }else{
+      railWrap.style.display = '';
+      dayBody.classList.remove('no-rail');
+    }
+  }
+
+  accentPicker.addEventListener('input', () => {
+    settings.accent = accentPicker.value;
+    document.documentElement.style.setProperty('--accent', settings.accent);
+  });
+  accentPicker.addEventListener('change', saveSettings);
+
+  timelineToggle.addEventListener('change', () => {
+    settings.showTimeline = timelineToggle.checked;
+    applyTimelineVisibility();
+    saveSettings();
+  });
+
+  // ---------- categories ----------
+  async function loadCategories(){
+    try{
+      const res = await window.storage.get('categories', false);
+      if(res && res.value){
+        categories = JSON.parse(res.value);
+      }else{
+        categories = DEFAULT_CATEGORIES.slice();
+        await saveCategories();
+      }
+    }catch(e){
+      categories = DEFAULT_CATEGORIES.slice();
+    }
+    renderCategoryUI();
+  }
+  async function saveCategories(){
+    try{ await window.storage.set('categories', JSON.stringify(categories), false); }catch(e){}
+  }
+  function catInfo(id){
+    return categories.find(c => c.id === id) || {id:'other', label:'Uncategorized', color:'#c9c9c9'};
+  }
+  function renderCategoryUI(){
+    catList.innerHTML = '';
+    categories.forEach(c => {
+      const row = document.createElement('div');
+      row.className = 'cat-row';
+      row.innerHTML = `
+        <span class="swatch" style="background:${c.color}"></span>
+        <span class="name"></span>
+        <button class="cat-del" data-id="${c.id}" title="Delete category">✕</button>
+      `;
+      row.querySelector('.name').textContent = c.label;
+      row.querySelector('.cat-del').addEventListener('click', () => deleteCategory(c.id));
+      catList.appendChild(row);
+    });
+
+    fCat.innerHTML = '';
+    categories.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.label;
+      fCat.appendChild(opt);
+    });
+  }
+  async function deleteCategory(id){
+    if(categories.length <= 1) return;
+    categories = categories.filter(c => c.id !== id);
+    await saveCategories();
+    renderCategoryUI();
+    loadDay();
+  }
+  document.getElementById('addCatBtn').addEventListener('click', async () => {
+    const nameInput = document.getElementById('newCatName');
+    const colorInput = document.getElementById('newCatColor');
+    const name = nameInput.value.trim();
+    if(!name) return;
+    const id = 'c' + Date.now().toString(36);
+    categories.push({id, label:name, color:colorInput.value});
+    await saveCategories();
+    renderCategoryUI();
+    nameInput.value = '';
+  });
+
+  // ---------- calendar ----------
+  function renderRailHours(){
+    railTrack.innerHTML = '';
+    for(let h=0; h<=24; h+=2){
+      const marker = document.createElement('div');
+      marker.className = 'rail-hour';
+      marker.style.top = (h/24*100) + '%';
+      marker.textContent = h===24 ? '24' : pad(h)+':00';
+      railTrack.appendChild(marker);
+    }
+  }
+
+  async function fetchMonthEntryDates(y,m){
+    monthHasEntries = new Set();
+    try{
+      const prefix = `activities:${y}-${pad(m+1)}`;
+      const res = await window.storage.list(prefix, false);
+      if(res && res.keys){
+        res.keys.forEach(k => monthHasEntries.add(k.replace('activities:','')));
+      }
+    }catch(e){}
+  }
+
+  async function renderCalendar(){
+    monthLabel.textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+    await fetchMonthEntryDates(viewYear, viewMonth);
+
+    dayGrid.innerHTML = '';
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+
+    for(let i=0;i<firstDay;i++){
+      const cell = document.createElement('div');
+      cell.className = 'day-cell empty';
+      dayGrid.appendChild(cell);
+    }
+
+    for(let d=1; d<=daysInMonth; d++){
+      const cell = document.createElement('div');
+      cell.className = 'day-cell';
+      const cellDate = new Date(viewYear, viewMonth, d);
+      const key = fmtKey(cellDate);
+      const isToday = fmtKey(today) === key;
+      const isSelected = fmtKey(selectedDate) === key;
+      if(isToday) cell.classList.add('today');
+      if(isSelected) cell.classList.add('selected');
+
+      const numSpan = document.createElement('span');
+      numSpan.textContent = d;
+      cell.appendChild(numSpan);
+
+      if(monthHasEntries.has(key)){
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        cell.appendChild(dot);
+      }
+
+      cell.addEventListener('click', () => {
+        selectedDate = cellDate;
+        resetForm();
+        renderCalendar();
+        loadDay();
+      });
+
+      dayGrid.appendChild(cell);
+    }
+  }
+
+  // ---------- day data ----------
+  async function loadDay(){
+    const key = fmtKey(selectedDate);
+    dateTitle.textContent = `${DAY_NAMES[selectedDate.getDay()]}, ${MONTH_NAMES[selectedDate.getMonth()]} ${selectedDate.getDate()}`;
+    dateSub.textContent = `${selectedDate.getFullYear()}`;
+    entriesCol.innerHTML = '<div class="empty-state"><span class="glyph">···</span><p>Loading…</p></div>';
+    renderRailHours();
+
+    let entries = [];
+    try{
+      const res = await window.storage.get(`activities:${key}`, false);
+      if(res && res.value) entries = JSON.parse(res.value);
+    }catch(e){ entries = []; }
+    entries.sort((a,b) => timeToMin(a.start) - timeToMin(b.start));
+    renderEntries(entries);
+    renderRailBlocks(entries);
+    renderTotal(entries);
+    renderBreakdown(entries);
+  }
+
+  function renderTotal(entries){
+    let totalMin = 0;
+    entries.forEach(e => {
+      let d = timeToMin(e.end) - timeToMin(e.start);
+      if(d<0) d += 1440;
+      totalMin += d;
+    });
+    const h = Math.floor(totalMin/60), m = totalMin%60;
+    totalTracked.textContent = `${h}h ${m}m`;
+  }
+
+  function renderBreakdown(entries){
+    if(entries.length === 0){ breakdownEl.style.display = 'none'; return; }
+    const totals = {};
+    let grand = 0;
+    entries.forEach(e => {
+      let d = timeToMin(e.end) - timeToMin(e.start);
+      if(d<0) d += 1440;
+      totals[e.category] = (totals[e.category]||0) + d;
+      grand += d;
+    });
+    if(grand === 0){ breakdownEl.style.display = 'none'; return; }
+    breakdownEl.style.display = 'block';
+    breakdownBar.innerHTML = '';
+    breakdownLegend.innerHTML = '';
+    Object.keys(totals).forEach(catId => {
+      const info = catInfo(catId);
+      const pct = (totals[catId]/grand*100);
+      const seg = document.createElement('div');
+      seg.className = 'seg';
+      seg.style.width = pct + '%';
+      seg.style.background = info.color;
+      seg.title = `${info.label}: ${durLabel(0,totals[catId])}`;
+      breakdownBar.appendChild(seg);
+
+      const li = document.createElement('div');
+      li.className = 'bl-item';
+      li.innerHTML = `<span class="bl-dot" style="background:${info.color}"></span><span></span>`;
+      li.querySelector('span:last-child').textContent = `${info.label} · ${durLabel(0,totals[catId])}`;
+      breakdownLegend.appendChild(li);
+    });
+  }
+
+  function renderEntries(entries){
+    entriesCol.innerHTML = '';
+    if(entries.length === 0){
+      entriesCol.innerHTML = `
+        <div class="empty-state">
+          <span class="glyph">···</span>
+          <p>Nothing logged for this day yet. Add what you did below — it'll show up here and on the timeline.</p>
+        </div>`;
+      return;
+    }
+    entries.forEach(e => {
+      const info = catInfo(e.category);
+      const row = document.createElement('div');
+      row.className = 'entry';
+      if(e.id === editingId) row.classList.add('editing');
+      const startMin = timeToMin(e.start), endMin = timeToMin(e.end);
+      row.innerHTML = `
+        <span class="cat-chip" style="background:${info.color}"></span>
+        <div class="body">
+          <div class="title"></div>
+          <div class="notes" style="display:none;"></div>
+          <div class="meta">
+            <span>${minToLabel(startMin)} – ${minToLabel(endMin)}</span>
+            <span class="dur">${durLabel(startMin,endMin)}</span>
+            <span></span>
+          </div>
+        </div>
+        <button class="del" title="Delete entry" data-id="${e.id}">✕</button>
+      `;
+      row.querySelector('.title').textContent = e.title;
+      row.querySelector('.meta span:last-child').textContent = info.label;
+      if(e.notes){
+        const notesEl = row.querySelector('.notes');
+        notesEl.style.display = 'block';
+        notesEl.textContent = e.notes;
+      }
+      row.querySelector('.del').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        deleteEntry(e.id);
+      });
+      row.addEventListener('click', () => startEdit(e));
+      entriesCol.appendChild(row);
+    });
+  }
+
+  function renderRailBlocks(entries){
+    railTrack.querySelectorAll('.rail-block').forEach(b => b.remove());
+    entries.forEach(e => {
+      const info = catInfo(e.category);
+      const startMin = timeToMin(e.start);
+      let endMin = timeToMin(e.end);
+      if(endMin <= startMin) endMin = startMin + 15;
+      const block = document.createElement('div');
+      block.className = 'rail-block';
+      block.style.top = (startMin/1440*100) + '%';
+      block.style.height = Math.max(((endMin-startMin)/1440*100), 0.8) + '%';
+      block.style.background = info.color;
+      block.title = `${e.title} (${minToLabel(startMin)}–${minToLabel(endMin)})`;
+      block.addEventListener('click', () => startEdit(e));
+      railTrack.appendChild(block);
+    });
+  }
+
+  async function saveDayEntries(key, entries){
+    await window.storage.set(`activities:${key}`, JSON.stringify(entries), false);
+  }
+
+  async function deleteEntry(id){
+    const key = fmtKey(selectedDate);
+    let entries = [];
+    try{
+      const res = await window.storage.get(`activities:${key}`, false);
+      if(res && res.value) entries = JSON.parse(res.value);
+    }catch(e){ entries = []; }
+    entries = entries.filter(e => e.id !== id);
+    try{
+      if(entries.length === 0){
+        await window.storage.delete(`activities:${key}`, false);
+      }else{
+        await saveDayEntries(key, entries);
+      }
+      statusMsg.textContent = 'Entry removed.';
+      if(editingId === id) resetForm();
+    }catch(e){
+      statusMsg.textContent = 'Could not remove entry — try again.';
+    }
+    await renderCalendar();
+    loadDay();
+  }
+
+  // ---------- form: add / edit ----------
+  const addForm = document.getElementById('addForm');
+  const formError = document.getElementById('formError');
+
+  function startEdit(entry){
+    editingId = entry.id;
+    document.getElementById('fTitle').value = entry.title;
+    document.getElementById('fCat').value = entry.category;
+    document.getElementById('fStart').value = entry.start;
+    document.getElementById('fEnd').value = entry.end;
+    document.getElementById('fNotes').value = entry.notes || '';
+    formTitleText.textContent = 'Edit activity';
+    cancelEditBtn.style.display = 'inline';
+    submitBtn.textContent = 'Save changes';
+    formError.textContent = '';
+    loadDay();
+    addForm.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+  function resetForm(){
+    editingId = null;
+    addForm.reset();
+    formTitleText.textContent = 'Add an activity';
+    cancelEditBtn.style.display = 'none';
+    submitBtn.textContent = 'Add to log';
+    formError.textContent = '';
+  }
+  cancelEditBtn.addEventListener('click', () => { resetForm(); loadDay(); });
+
+  addForm.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    formError.textContent = '';
+    const title = document.getElementById('fTitle').value.trim();
+    const category = document.getElementById('fCat').value;
+    const start = document.getElementById('fStart').value;
+    const end = document.getElementById('fEnd').value;
+    const notes = document.getElementById('fNotes').value.trim();
+
+    if(!title){ formError.textContent = 'Give this activity a short description.'; return; }
+    if(!start || !end){ formError.textContent = 'Set a start and end time.'; return; }
+
+    const key = fmtKey(selectedDate);
+    let entries = [];
+    try{
+      const res = await window.storage.get(`activities:${key}`, false);
+      if(res && res.value) entries = JSON.parse(res.value);
+    }catch(e){ entries = []; }
+
+    if(editingId){
+      entries = entries.map(e => e.id === editingId ? {...e, title, category, start, end, notes} : e);
+    }else{
+      entries.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+        title, category, start, end, notes
+      });
+    }
+
+    try{
+      await saveDayEntries(key, entries);
+      statusMsg.textContent = editingId ? 'Changes saved.' : 'Saved to your log.';
+      resetForm();
+      await renderCalendar();
+      loadDay();
+    }catch(e){
+      formError.textContent = 'Could not save — check your connection and try again.';
+    }
+  });
+
+  // ---------- export ----------
+  document.getElementById('exportBtn').addEventListener('click', async () => {
+    statusMsg.textContent = 'Preparing export…';
+    try{
+      const res = await window.storage.list('activities:', false);
+      const bundle = { categories, settings, days: {} };
+      if(res && res.keys){
+        for(const k of res.keys){
+          const r = await window.storage.get(k, false);
+          if(r && r.value){ bundle.days[k.replace('activities:','')] = JSON.parse(r.value); }
+        }
+      }
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'daylog-export.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      statusMsg.textContent = 'Export downloaded.';
+    }catch(e){
+      statusMsg.textContent = 'Export failed — try again.';
+    }
+  });
+
+  document.getElementById('prevMonth').addEventListener('click', () => {
+    viewMonth--;
+    if(viewMonth < 0){ viewMonth = 11; viewYear--; }
+    renderCalendar();
+  });
+  document.getElementById('nextMonth').addEventListener('click', () => {
+    viewMonth++;
+    if(viewMonth > 11){ viewMonth = 0; viewYear++; }
+    renderCalendar();
+  });
+
+  // init
+  async function init(){
+    renderTodayStamp();
+    renderRailHours();
+    await loadSettings();
+    await loadCategories();
+    await renderCalendar();
+    await loadDay();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
