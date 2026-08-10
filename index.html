@@ -761,7 +761,17 @@
     let h12 = h%12; if(h12===0) h12=12;
     return `${h12}:${pad(m)} ${ap}`;
   }
-  function durLabel(startMin,endMin){
+  function durLabel(startMin,endMin,durationSec){
+    // Prefer an exact recorded duration (e.g. from the stopwatch) so
+    // sub-minute sessions show real seconds instead of rounding up.
+    if(typeof durationSec === 'number'){
+      if(durationSec < 60) return `${durationSec}s`;
+      const totalMin = Math.round(durationSec/60);
+      const h = Math.floor(totalMin/60), m = totalMin%60;
+      if(h && m) return `${h}h ${m}m`;
+      if(h) return `${h}h`;
+      return `${m}m`;
+    }
     let d = endMin-startMin;
     if(d<0) d += 1440;
     const h = Math.floor(d/60), m = d%60;
@@ -1019,11 +1029,10 @@
     const title = swTitleInput.value.trim();
     const category = swCatSelect.value;
     const start = `${pad(swStartDate.getHours())}:${pad(swStartDate.getMinutes())}`;
-    let end = `${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
-    if(end === start){
-      const bumped = new Date(swStartDate.getTime() + 60000);
-      end = `${pad(bumped.getHours())}:${pad(bumped.getMinutes())}`;
-    }
+    const end = `${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+    // Real elapsed time, to the second — used for display so short sessions
+    // aren't shown as longer than they actually were.
+    const durationSec = Math.max(1, Math.round((endDate.getTime() - swStartDate.getTime()) / 1000));
 
     let entries = [];
     try{
@@ -1032,14 +1041,16 @@
     }catch(e){ entries = []; }
     entries.push({
       id: `${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
-      title, category, start, end, notes:''
+      title, category, start, end, notes:'', durationSec
     });
 
     try{
       await saveDayEntries(startKey, entries);
       await window.storage.delete('stopwatch_active', false);
     }catch(e){
-      swError.textContent = 'Could not save — try tapping stop again.';
+      console.error('Stopwatch save failed:', e);
+      const detail = (e && (e.message || e.code)) ? ` (${e.code || ''} ${e.message || ''})`.trim() : '';
+      swError.textContent = `Could not save${detail} — try tapping stop again.`;
       return;
     }
 
@@ -1206,7 +1217,7 @@
           <div class="notes" style="display:none;"></div>
           <div class="meta">
             <span>${minToLabel(startMin)} – ${minToLabel(endMin)}</span>
-            <span class="dur">${durLabel(startMin,endMin)}</span>
+            <span class="dur">${durLabel(startMin,endMin,e.durationSec)}</span>
             <span></span>
           </div>
         </div>
@@ -1240,7 +1251,7 @@
       block.style.top = (startMin/1440*100) + '%';
       block.style.height = Math.max(((endMin-startMin)/1440*100), 0.8) + '%';
       block.style.background = info.color;
-      block.title = `${e.title} (${minToLabel(startMin)}–${minToLabel(endMin)})`;
+      block.title = `${e.title} (${minToLabel(startMin)}–${minToLabel(endMin)}, ${durLabel(startMin,endMin,e.durationSec)})`;
       block.addEventListener('click', () => startEdit(e));
       railTrack.appendChild(block);
     });
