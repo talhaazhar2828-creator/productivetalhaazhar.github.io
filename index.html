@@ -678,66 +678,6 @@
   </div>
 </div>
 
-<!-- Firebase (replaces the Claude.ai window.storage API) -->
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script>
-  // ---- 1. PASTE YOUR FIREBASE CONFIG HERE ----
-  // Firebase console → Project settings → General → "Your apps" → Web app (</>)
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-
-  // Resolves once anonymous sign-in completes. Every storage call waits on
-  // this, so it doesn't matter that sign-in happens asynchronously.
-  const authReady = new Promise((resolve, reject) => {
-    auth.onAuthStateChanged(user => { if (user) resolve(user); });
-    auth.signInAnonymously().catch(reject);
-  });
-
-  async function dataCollection(){
-    const user = await authReady;
-    return db.collection('users').doc(user.uid).collection('data');
-  }
-
-  // Same shape as the old window.storage API, backed by Firestore instead.
-  window.storage = {
-    async get(key, shared){
-      const coll = await dataCollection();
-      const doc = await coll.doc(key).get();
-      if (!doc.exists) throw new Error(`Key not found: ${key}`);
-      return { key, value: doc.data().value, shared: !!shared };
-    },
-    async set(key, value, shared){
-      const coll = await dataCollection();
-      await coll.doc(key).set({ value, updatedAt: Date.now() });
-      return { key, value, shared: !!shared };
-    },
-    async delete(key, shared){
-      const coll = await dataCollection();
-      await coll.doc(key).delete();
-      return { key, deleted: true, shared: !!shared };
-    },
-    async list(prefix, shared){
-      const coll = await dataCollection();
-      const snap = await coll.get();
-      const keys = [];
-      snap.forEach(d => { if (!prefix || d.id.startsWith(prefix)) keys.push(d.id); });
-      return { keys, prefix, shared: !!shared };
-    }
-  };
-</script>
-
 <script>
 (function(){
   const pad = n => String(n).padStart(2,'0');
@@ -761,17 +701,7 @@
     let h12 = h%12; if(h12===0) h12=12;
     return `${h12}:${pad(m)} ${ap}`;
   }
-  function durLabel(startMin,endMin,durationSec){
-    // Prefer an exact recorded duration (e.g. from the stopwatch) so
-    // sub-minute sessions show real seconds instead of rounding up.
-    if(typeof durationSec === 'number'){
-      if(durationSec < 60) return `${durationSec}s`;
-      const totalMin = Math.round(durationSec/60);
-      const h = Math.floor(totalMin/60), m = totalMin%60;
-      if(h && m) return `${h}h ${m}m`;
-      if(h) return `${h}h`;
-      return `${m}m`;
-    }
+  function durLabel(startMin,endMin){
     let d = endMin-startMin;
     if(d<0) d += 1440;
     const h = Math.floor(d/60), m = d%60;
@@ -1029,10 +959,11 @@
     const title = swTitleInput.value.trim();
     const category = swCatSelect.value;
     const start = `${pad(swStartDate.getHours())}:${pad(swStartDate.getMinutes())}`;
-    const end = `${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
-    // Real elapsed time, to the second — used for display so short sessions
-    // aren't shown as longer than they actually were.
-    const durationSec = Math.max(1, Math.round((endDate.getTime() - swStartDate.getTime()) / 1000));
+    let end = `${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+    if(end === start){
+      const bumped = new Date(swStartDate.getTime() + 60000);
+      end = `${pad(bumped.getHours())}:${pad(bumped.getMinutes())}`;
+    }
 
     let entries = [];
     try{
@@ -1041,16 +972,14 @@
     }catch(e){ entries = []; }
     entries.push({
       id: `${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
-      title, category, start, end, notes:'', durationSec
+      title, category, start, end, notes:''
     });
 
     try{
       await saveDayEntries(startKey, entries);
       await window.storage.delete('stopwatch_active', false);
     }catch(e){
-      console.error('Stopwatch save failed:', e);
-      const detail = (e && (e.message || e.code)) ? ` (${e.code || ''} ${e.message || ''})`.trim() : '';
-      swError.textContent = `Could not save${detail} — try tapping stop again.`;
+      swError.textContent = 'Could not save — try tapping stop again.';
       return;
     }
 
@@ -1217,7 +1146,7 @@
           <div class="notes" style="display:none;"></div>
           <div class="meta">
             <span>${minToLabel(startMin)} – ${minToLabel(endMin)}</span>
-            <span class="dur">${durLabel(startMin,endMin,e.durationSec)}</span>
+            <span class="dur">${durLabel(startMin,endMin)}</span>
             <span></span>
           </div>
         </div>
@@ -1251,7 +1180,7 @@
       block.style.top = (startMin/1440*100) + '%';
       block.style.height = Math.max(((endMin-startMin)/1440*100), 0.8) + '%';
       block.style.background = info.color;
-      block.title = `${e.title} (${minToLabel(startMin)}–${minToLabel(endMin)}, ${durLabel(startMin,endMin,e.durationSec)})`;
+      block.title = `${e.title} (${minToLabel(startMin)}–${minToLabel(endMin)})`;
       block.addEventListener('click', () => startEdit(e));
       railTrack.appendChild(block);
     });
