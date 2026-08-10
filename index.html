@@ -678,6 +678,66 @@
   </div>
 </div>
 
+<!-- Firebase (replaces the Claude.ai window.storage API) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+  // ---- 1. PASTE YOUR FIREBASE CONFIG HERE ----
+  // Firebase console → Project settings → General → "Your apps" → Web app (</>)
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // Resolves once anonymous sign-in completes. Every storage call waits on
+  // this, so it doesn't matter that sign-in happens asynchronously.
+  const authReady = new Promise((resolve, reject) => {
+    auth.onAuthStateChanged(user => { if (user) resolve(user); });
+    auth.signInAnonymously().catch(reject);
+  });
+
+  async function dataCollection(){
+    const user = await authReady;
+    return db.collection('users').doc(user.uid).collection('data');
+  }
+
+  // Same shape as the old window.storage API, backed by Firestore instead.
+  window.storage = {
+    async get(key, shared){
+      const coll = await dataCollection();
+      const doc = await coll.doc(key).get();
+      if (!doc.exists) throw new Error(`Key not found: ${key}`);
+      return { key, value: doc.data().value, shared: !!shared };
+    },
+    async set(key, value, shared){
+      const coll = await dataCollection();
+      await coll.doc(key).set({ value, updatedAt: Date.now() });
+      return { key, value, shared: !!shared };
+    },
+    async delete(key, shared){
+      const coll = await dataCollection();
+      await coll.doc(key).delete();
+      return { key, deleted: true, shared: !!shared };
+    },
+    async list(prefix, shared){
+      const coll = await dataCollection();
+      const snap = await coll.get();
+      const keys = [];
+      snap.forEach(d => { if (!prefix || d.id.startsWith(prefix)) keys.push(d.id); });
+      return { keys, prefix, shared: !!shared };
+    }
+  };
+</script>
+
 <script>
 (function(){
   const pad = n => String(n).padStart(2,'0');
